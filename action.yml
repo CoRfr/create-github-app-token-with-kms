@@ -1,6 +1,6 @@
-name: "Create GitHub App Token"
-description: "GitHub Action for creating a GitHub App installation access token"
-author: "Gregor Martynus and Parker Brown"
+name: "Create GitHub App Token with AWS KMS"
+description: "GitHub Action for creating a GitHub App installation access token, using an AWS KMS key to sign the request."
+author: "Gregor Martynus and Parker Brown and Bertrand Roussel"
 branding:
   icon: "lock"
   color: "gray-dark"
