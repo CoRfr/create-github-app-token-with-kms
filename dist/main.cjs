@@ -67576,7 +67576,7 @@ async function set(cache4, options, data2) {
   await cache4.set(key, value);
 }
 function optionsToCacheKey({
-  installationId,
+  installationId: installationId2,
   permissions: permissions2 = {},
   repositoryIds = [],
   repositoryNames = []
@@ -67585,14 +67585,14 @@ function optionsToCacheKey({
   const repositoryIdsString = repositoryIds.sort().join(",");
   const repositoryNamesString = repositoryNames.join(",");
   return [
-    installationId,
+    installationId2,
     repositoryIdsString,
     repositoryNamesString,
     permissionsString
   ].filter(Boolean).join("|");
 }
 function toTokenAuthentication({
-  installationId,
+  installationId: installationId2,
   token,
   createdAt,
   expiresAt,
@@ -67607,7 +67607,7 @@ function toTokenAuthentication({
       type: "token",
       tokenType: "installation",
       token,
-      installationId,
+      installationId: installationId2,
       permissions: permissions2,
       createdAt,
       expiresAt,
@@ -67619,8 +67619,8 @@ function toTokenAuthentication({
   );
 }
 async function getInstallationAuthentication(state2, options, customRequest) {
-  const installationId = Number(options.installationId || state2.installationId);
-  if (!installationId) {
+  const installationId2 = Number(options.installationId || state2.installationId);
+  if (!installationId2) {
     throw new Error(
       "[@octokit/auth-app] installationId option is required for installation authentication."
     );
@@ -67635,7 +67635,7 @@ async function getInstallationAuthentication(state2, options, customRequest) {
   const request2 = customRequest || state2.request;
   return getInstallationAuthenticationConcurrently(
     state2,
-    { ...options, installationId },
+    { ...options, installationId: installationId2 },
     request2
   );
 }
@@ -68060,7 +68060,7 @@ async function pRetry(input, options) {
 }
 
 // lib/main.js
-async function main(appId2, privateKey2, owner2, repositories2, permissions2, core3, auth5, request2, skipTokenRevoke2) {
+async function main(appId2, privateKey2, owner2, repositories2, permissions2, core3, auth5, request2, skipTokenRevoke2, providedInstallationId) {
   let parsedOwner = "";
   let parsedRepositoryNames = [];
   if (!owner2 && repositories2.length === 0) {
@@ -68094,9 +68094,19 @@ async function main(appId2, privateKey2, owner2, repositories2, permissions2, co
 - ${parsedOwner}/${repo}`).join("")}`
     );
   }
-  let authentication, installationId, appSlug;
-  if (parsedRepositoryNames.length > 0) {
-    ({ authentication, installationId, appSlug } = await pRetry(
+  let authentication, installationId2, appSlug;
+  if (providedInstallationId) {
+    core3.info(`Using provided installation ID: ${providedInstallationId}`);
+    installationId2 = Number(providedInstallationId);
+    authentication = await auth5({
+      type: "installation",
+      installationId: installationId2,
+      repositoryNames: parsedRepositoryNames.length > 0 ? parsedRepositoryNames : void 0,
+      permissions: permissions2
+    });
+    appSlug = "github-app";
+  } else if (parsedRepositoryNames.length > 0) {
+    ({ authentication, installationId: installationId2, appSlug } = await pRetry(
       () => getTokenFromRepository(
         request2,
         auth5,
@@ -68117,7 +68127,7 @@ async function main(appId2, privateKey2, owner2, repositories2, permissions2, co
       }
     ));
   } else {
-    ({ authentication, installationId, appSlug } = await pRetry(
+    ({ authentication, installationId: installationId2, appSlug } = await pRetry(
       () => getTokenFromOwner(request2, auth5, parsedOwner, permissions2),
       {
         onFailedAttempt: (error2) => {
@@ -68131,7 +68141,7 @@ async function main(appId2, privateKey2, owner2, repositories2, permissions2, co
   }
   core3.setSecret(authentication.token);
   core3.setOutput("token", authentication.token);
-  core3.setOutput("installation-id", installationId);
+  core3.setOutput("installation-id", installationId2);
   core3.setOutput("app-slug", appSlug);
   if (!skipTokenRevoke2) {
     core3.saveState("token", authentication.token);
@@ -68150,9 +68160,9 @@ async function getTokenFromOwner(request2, auth5, parsedOwner, permissions2) {
     installationId: response.data.id,
     permissions: permissions2
   });
-  const installationId = response.data.id;
+  const installationId2 = response.data.id;
   const appSlug = response.data["app_slug"];
-  return { authentication, installationId, appSlug };
+  return { authentication, installationId: installationId2, appSlug };
 }
 async function getTokenFromRepository(request2, auth5, parsedOwner, parsedRepositoryNames, permissions2) {
   const response = await request2("GET /repos/{owner}/{repo}/installation", {
@@ -68168,9 +68178,9 @@ async function getTokenFromRepository(request2, auth5, parsedOwner, parsedReposi
     repositoryNames: parsedRepositoryNames,
     permissions: permissions2
   });
-  const installationId = response.data.id;
+  const installationId2 = response.data.id;
   const appSlug = response.data["app_slug"];
-  return { authentication, installationId, appSlug };
+  return { authentication, installationId: installationId2, appSlug };
 }
 
 // lib/request.js
@@ -68254,7 +68264,7 @@ async function createKmsSignedJwt(appId2, sign) {
 function createKmsAppAuth({ appId: appId2, kmsKeyArn, awsProfile: awsProfile2, request: request2 }) {
   const sign = createKmsSigner(kmsKeyArn, awsProfile2);
   const auth5 = async (options = {}) => {
-    const { type = "app", installationId, repositoryNames, permissions: permissions2 } = options;
+    const { type = "app", installationId: installationId2, repositoryNames, permissions: permissions2 } = options;
     if (type === "app") {
       const jwt = await createKmsSignedJwt(appId2, sign);
       return {
@@ -68264,7 +68274,7 @@ function createKmsAppAuth({ appId: appId2, kmsKeyArn, awsProfile: awsProfile2, r
       };
     }
     if (type === "installation") {
-      if (!installationId) {
+      if (!installationId2) {
         throw new Error("installationId is required for installation authentication");
       }
       const jwt = await createKmsSignedJwt(appId2, sign);
@@ -68283,7 +68293,7 @@ function createKmsAppAuth({ appId: appId2, kmsKeyArn, awsProfile: awsProfile2, r
       const response = await request2(
         "POST /app/installations/{installation_id}/access_tokens",
         {
-          installation_id: installationId,
+          installation_id: installationId2,
           ...body,
           ...requestOptions
         }
@@ -68292,7 +68302,7 @@ function createKmsAppAuth({ appId: appId2, kmsKeyArn, awsProfile: awsProfile2, r
         type: "token",
         token: response.data.token,
         tokenType: "installation",
-        installationId,
+        installationId: installationId2,
         expiresAt: response.data.expires_at,
         permissions: response.data.permissions,
         repositorySelection: response.data.repository_selection
@@ -68326,6 +68336,7 @@ var awsKmsArn = import_core20.default.getInput("aws-kms-arn");
 var awsProfile = import_core20.default.getInput("aws-profile");
 var owner = import_core20.default.getInput("owner");
 var repositories = import_core20.default.getInput("repositories").split(/[\n,]+/).map((s4) => s4.trim()).filter((x4) => x4 !== "");
+var installationId = import_core20.default.getInput("installation-id");
 var skipTokenRevoke = import_core20.default.getBooleanInput("skip-token-revoke");
 var permissions = getPermissionsFromInputs(process.env);
 if (!privateKey && !awsKmsArn) {
@@ -68358,7 +68369,8 @@ var main_default = main(
   import_core20.default,
   authFunction,
   request_default,
-  skipTokenRevoke
+  skipTokenRevoke,
+  installationId
 ).catch((error2) => {
   console.error(error2);
   import_core20.default.setFailed(error2.message);

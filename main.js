@@ -26,6 +26,7 @@ const repositories = core
   .split(/[\n,]+/)
   .map((s) => s.trim())
   .filter((x) => x !== "");
+const installationId = core.getInput("installation-id");
 
 const skipTokenRevoke = core.getBooleanInput("skip-token-revoke");
 
@@ -68,6 +69,7 @@ export default main(
   authFunction,
   request,
   skipTokenRevoke,
+  installationId,
 ).catch((error) => {
   /* c8 ignore next 3 */
   console.error(error);

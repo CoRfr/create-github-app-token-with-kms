@@ -23,6 +23,9 @@ inputs:
   repositories:
     description: "Comma or newline-separated list of repositories to install the GitHub App on (defaults to current repository if owner is unset)"
     required: false
+  installation-id:
+    description: "GitHub App installation ID (if provided, skips the installation lookup)"
+    required: false
   skip-token-revoke:
     description: "If true, the token will not be revoked when the current job is complete"
     required: false
